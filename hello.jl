@@ -4,7 +4,7 @@ function mandelbrot(a)
     for i=1:50
         z = z^2 + a
     end
-    return z
+    return z #test
 end
 
 for y=1.0:-0.05:-1.0
