@@ -86,23 +86,61 @@ function yaw_controller(yaw, yaw_ref)
     return yaw_rate_ref
 end
 
+# function cascade_controller!(environment, k)
+#     global ref_position_xyz_world
+#     println("in cascade_controller")
+#     roll, pitch, yaw, altitude = sensing_and_estimation(environment)
+#     roll_ref, pitch_ref = position_to_quadrotor_orientation_controller(environment, k)
+#     println("roll ref: ", roll_ref, " pitch ref: ", pitch_ref)
+
+#     yaw_ref = 0
+#     altitude_ref = ref_position_xyz_world[3]
+    
+#     thrust_ref = altitude_controller(altitude, altitude_ref, environment)
+#     yaw_rate_ref = yaw_controller(yaw, yaw_ref)
+
+#     rotor_speeds = MMA!(roll_ref, pitch_ref, yaw_rate_ref, thrust_ref)
+#     println("rotor_speeds: ", rotor_speeds)
+#     set_input!(environment, rotor_speeds)
+# end 
+
 function cascade_controller!(environment, k)
     global ref_position_xyz_world
-    println("in cascade_controller")
+    # get the current system values
     roll, pitch, yaw, altitude = sensing_and_estimation(environment)
-    roll_ref, pitch_ref = position_to_quadrotor_orientation_controller(environment, k)
-    println("roll ref: ", roll_ref, " pitch ref: ", pitch_ref)
+    println("state: $(sensing_and_estimation(environment))")
+    # set some reference - TODO - make this to be set from outside or smth
+    #roll_ref, pitch_ref, yaw_ref, altitude_ref = [0.0, 0.0, 1.57, 1]
+    roll_ref, pitch_ref, = position_to_quadrotor_orientation_controller(environment, k)
+    println("roll ref: $roll_ref, pitch_ref: $pitch_ref")
+    yaw_ref = 0 #1.57
+    altitude_ref = ref_position_xyz_world[3] #1
 
-    yaw_ref = 0
-    altitude_ref = ref_position_xyz_world[3]
-    
-    thrust_ref = altitude_controller(altitude, altitude_ref, environment)
-    yaw_rate_ref = yaw_controller(yaw, yaw_ref)
+    # PIDs
+    # roll
+    K_p_roll = 4 #1
+    K_d_roll = 1
+    # pitch
+    K_p_pitch = 4 #1
+    K_d_pitch = 1
+    # yaw
+    K_p_yaw = 4 #1
+    K_d_yaw = 1
+    # thrust
+    K_p_thrust = 10 # kinda tuned
+    K_d_thrust = 10 # kinda tuned
+    # thrust feedforward is there to compensate gravity and i took the numbers from the cascaded hover example.
+    thrust_feedforward = 20 * 5.1 * 1/sqrt(4)#normalize([1;1;1;1])
 
-    rotor_speeds = MMA!(roll_ref, pitch_ref, yaw_rate_ref, thrust_ref)
-    println("rotor_speeds: ", rotor_speeds)
-    set_input!(environment, rotor_speeds)
-end 
+    roll_cntrl = K_p_roll * (roll_ref - roll) + K_d_roll * (0 - get_state(environment)[10])
+    pitch_cntrl = K_p_pitch * (pitch_ref - pitch) + K_d_pitch * (0 - get_state(environment)[11])
+    yaw_cntrl = K_p_yaw * (yaw_ref - yaw) + K_d_yaw * (0 - get_state(environment)[12])
+    thrust = K_p_thrust * (altitude_ref - altitude) + K_d_thrust * (0 - get_state(environment)[9])+ thrust_feedforward
+
+    u = MMA!(roll_cntrl, pitch_cntrl, yaw_cntrl, thrust)
+    set_input!(environment, u)
+
+end
 
 function controller!(environment, k)
     #cascade_controller(environment, k)
