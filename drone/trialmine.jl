@@ -24,18 +24,20 @@ function velocity_controller!(environment, v_des, ω_des, dt)
 
     # Error terms
     error = v_des .- linear_velocity
-    thrust = (10 .* error .- 1 .* linear_velocity .+ 5.1) # P, D, feedforward
+    #thrust = (10 .* error .- 1 .* linear_velocity .+ 5.1) # P, D, feedforward
+     theta_des=error
+     error_theta=theta_des-theta_is
+     attitude_controller!(error_theta)
+    #bekomme aus orientation, vllt package rotation
+   #u1, u2, u3, u4 rotor speeds die im im quadrat thrust ergeben rpm aus rom to force torque umdrehen
+   #u1 =10+
 
-    # Debugging prints
-    println("Velocity Error: ", error)
-    println("Thrust: ", thrust)
-    rpm_thrust = distribute_thrust(thrust)  # Map thrust to 4 rotors
-    rpm_torque = attitude_controller!(environment, ω_des, dt)  # Attitude control
+    #rpm_thrust = distribute_thrust(thrust)  # Map thrust to 4 rotors
+    # rpm_torque = attitude_controller!(environment, ω_des, dt)  # Attitude control
 
-    # Combine thrust and torque (simplified)
-    rpm = rpm_thrust .* 20 .* trans_mode .+ rpm_torque
-    println("RPM: ", rpm)
-    set_input!(environment, rpm)
+    # # Combine thrust and torque
+    # rpm = rpm_thrust .* 20 .* trans_mode .+ rpm_torque
+    # set_input!(environment, rpm)
 end
 # Position controller
 function position_controller!(environment, pos_des, dt)
@@ -43,40 +45,43 @@ function position_controller!(environment, pos_des, dt)
     pos_is = state[1:3]
     v_des = pos_des .- pos_is
 
-    # Desired angular velocities (tune these based on the desired orientation)
+    # Desired angular velocities 
     ω_des = [0.0, 0.0, 0.0]
 
-    # Debugging prints
-    println("Position Desired: ", pos_des)
-    println("Position Error: ", v_des)
 
     velocity_controller!(environment, v_des, ω_des, dt)
 end
 # PID Attitude controller
 function attitude_controller!(environment, ω_des, dt)
-    global integral_error
-    global previous_error
+    F1 = ... theta_error
+    F2
+    F3
+    F4
 
-    state = get_state(environment)
-    angular_velocity = state[10:12] # ωx, ωy, ωz 
-     # Error terms
-     error = ω_des .- angular_velocity
-     integral_error += error * dt
-     derivative_error = (error - previous_error) / dt
+    u1 = ... F1 ...
+    u2 = ... F2 ...
+    u3 = ... F3 ...
+    u4 = ... F4 ...
+
+    #F=Fg/4+-Kp*(theta_error komponenten addiert)
+
+    # global integral_error
+    # global previous_error
+
+    # state = get_state(environment)
+    # angular_velocity = state[10:12] # ωx, ωy, ωz 
+    #  # Error terms
+    #  error = ω_des .- angular_velocity
+    #  integral_error += error * dt
+    #  derivative_error = (error - previous_error) / dt
  
-     torque = Kp .* error .+ Ki .* integral_error .+ Kd .* derivative_error
-     previous_error = error
+    #  torque = Kp .* error .+ Ki .* integral_error .+ Kd .* derivative_error
+    #  previous_error = error
  
-     # Debugging prints
-     println("Attitude Error: ", error)
-     println("Integral Error: ", integral_error)
-     println("Derivative Error: ", derivative_error)
-     println("Torque: ", torque)
+    #  # Apply the torque to the motors
+    #  rpm_torque = [torque[1], -torque[1], torque[2], -torque[2]]
  
-     # Apply the torque to the motors
-     rpm_torque = [torque[1], -torque[1], torque[2], -torque[2]]
- 
-     return rpm_torque
+    #  return rpm_torque
  end
  # Define waypoints
  waypoints = [[0.0, 0.0, 0.5], [1.0, 0.0, 0.5], [1.0, 1.0, 0.5], [0.0, 1.0, 0.5], [0.0, 0.0, 0.5]]
@@ -97,10 +102,6 @@ function attitude_controller!(environment, ω_des, dt)
          current_waypoint_index = current_waypoint_index % length(waypoints) + 1
      end
  
-     # Debugging prints
-     println("Current Position: ", current_pos)
-     println("Current Waypoint: ", pos_des)
-     println("Waypoint Index: ", current_waypoint_index)
  end
  # ### Simulate
  initialize!(quadrotor_env, :quadrotor)
