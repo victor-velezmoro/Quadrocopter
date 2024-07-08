@@ -62,6 +62,15 @@ function attitude_controller!(environment, ω_des, dt)
     u2 = ... F2 ...
     u3 = ... F3 ...
     u4 = ... F4 ...
+    #function rpm_to_force_torque(::QuadrotorWaypoint, rpm::Real, rotor_sign::Int64)
+       # force_factor = 0.001
+       # torque_factor = 0.0001
+    
+       # force = sign(rpm)*force_factor*rpm^2
+        #torque = sign(rpm)*rotor_sign*torque_factor*rpm^2
+    
+        #return [force;0;0], [torque;0;0]
+    #end
 
     #F=Fg/4+-Kp*(theta_error komponenten addiert)
 
