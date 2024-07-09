@@ -69,40 +69,7 @@ function position_to_quadrotor_orientation_controller(environment, k)
     return roll_ref, pitch_ref
 end 
 
-function altitude_controller(altitude, altitude_ref, environment)
-    linear_velocity = get_state(environment)[7:9]
-    K_p_altitude = 20.0
-    K_d_altitude = 0.5
-    altitude_error = altitude_ref - altitude
-    thrust_ref = (K_p_altitude * altitude_error - K_d_altitude * linear_velocity[3]) * 15   # Assuming zero vertical velocity for simplicity
-    return thrust_ref
-end
 
-function yaw_controller(yaw, yaw_ref)
-    K_p_yaw = 10.0
-    K_d_yaw = 0.1
-    yaw_error = yaw_ref - yaw
-    yaw_rate_ref = K_p_yaw * yaw_error - K_d_yaw * 0  # Assuming zero yaw rate for simplicity
-    return yaw_rate_ref
-end
-
-# function cascade_controller!(environment, k)
-#     global ref_position_xyz_world
-#     println("in cascade_controller")
-#     roll, pitch, yaw, altitude = sensing_and_estimation(environment)
-#     roll_ref, pitch_ref = position_to_quadrotor_orientation_controller(environment, k)
-#     println("roll ref: ", roll_ref, " pitch ref: ", pitch_ref)
-
-#     yaw_ref = 0
-#     altitude_ref = ref_position_xyz_world[3]
-    
-#     thrust_ref = altitude_controller(altitude, altitude_ref, environment)
-#     yaw_rate_ref = yaw_controller(yaw, yaw_ref)
-
-#     rotor_speeds = MMA!(roll_ref, pitch_ref, yaw_rate_ref, thrust_ref)
-#     println("rotor_speeds: ", rotor_speeds)
-#     set_input!(environment, rotor_speeds)
-# end 
 
 function cascade_controller!(environment, k)
     global ref_position_xyz_world
