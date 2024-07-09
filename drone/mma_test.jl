@@ -64,8 +64,9 @@ function position_to_quadrotor_orientation_controller(environment, k)
    
     roll_ref = -(K_p_xy_roll * (ref_position_xyz_world[2] - position[2]) + K_d_xy_roll * (0 - linear_velocity[2]))
     pitch_ref = K_p_xy_pitch * (ref_position_xyz_world[1] - position[1]) + K_d_xy_pitch * (0 - linear_velocity[1])
-    plot_dict["reference_traj"][1:3, k] = [roll_ref, pitch_ref, ref_position_xyz_world[2]-position[2]]
+    #plot_dict["reference_traj"][1:3, k] = [roll_ref, pitch_ref, ref_position_xyz_world[2]-position[2]]
    
+    
     return roll_ref, pitch_ref
 end 
 
@@ -105,6 +106,7 @@ function cascade_controller!(environment, k)
     thrust = K_p_thrust * (altitude_ref - altitude) + K_d_thrust * (0 - get_state(environment)[9])+ thrust_feedforward
     println("roll_cntrl: ", roll_cntrl, " pitch_cntrl: ", pitch_cntrl, " yaw_cntrl: ", yaw_cntrl, " thrust: ", thrust)
     u = MMA!(roll_cntrl, pitch_cntrl, yaw_cntrl, thrust)
+    println("u: ", u)
     set_input!(environment, u)
 
 end
@@ -136,6 +138,7 @@ function fly_through_waypoints_controller!(environment, k)
     end
     ref_position_xyz_world = waypoints[next_waypoint]
     println("ref_position_xyz_world: ", ref_position_xyz_world)
+    println("current position: ", get_state(environment)[1:3])
     cascade_controller!(environment, k)
 end
 
