@@ -1,9 +1,9 @@
 using Dojo
 using DojoEnvironments
 using LinearAlgebra
-
+using Rotations
 # ### Environment
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=2000)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=200, gravity=0)
 
 # ### PID Controller Parameters
 Kp = [2.0, 2.0, 2.0]   # Proportional gain
@@ -22,12 +22,15 @@ function velocity_controller!(environment, v_des, ω_des, dt)
     state = get_state(environment)
     linear_velocity = state[7:9] # vx, vy, vz
 
+    orientation = state[4:6] # axis*angle
+    theta_is = norm(orientation)
     # Error terms
     error = v_des .- linear_velocity
     #thrust = (10 .* error .- 1 .* linear_velocity .+ 5.1) # P, D, feedforward
-     theta_des=error
-     error_theta=theta_des-theta_is
-     attitude_controller!(error_theta)
+    theta_des=error
+    error_theta=theta_des. - theta_is
+    attitude_controller!(error_theta)
+end
     #bekomme aus orientation, vllt package rotation
    #u1, u2, u3, u4 rotor speeds die im im quadrat thrust ergeben rpm aus rom to force torque umdrehen
    #u1 =10+
@@ -38,7 +41,7 @@ function velocity_controller!(environment, v_des, ω_des, dt)
     # # Combine thrust and torque
     # rpm = rpm_thrust .* 20 .* trans_mode .+ rpm_torque
     # set_input!(environment, rpm)
-end
+
 # Position controller
 function position_controller!(environment, pos_des, dt)
     state = get_state(environment)
@@ -52,16 +55,29 @@ function position_controller!(environment, pos_des, dt)
     velocity_controller!(environment, v_des, ω_des, dt)
 end
 # PID Attitude controller
-function attitude_controller!(environment, ω_des, dt)
-    F1 = ... theta_error
-    F2
-    F3
-    F4
+function attitude_controller!(environment, error_theta, error, dt)
+    #F1 = ... theta_error
+    #F2
+    #F3
+    #F4
 
-    u1 = ... F1 ...
-    u2 = ... F2 ...
-    u3 = ... F3 ...
-    u4 = ... F4 ...
+    F1=0+5*error_theta[1]+5*error_theta[2]+5*error[3]
+    F2=0-5*error_theta[1]+5*error_theta[2]+5*error[3]
+    F3=0-5*error_theta[1]-5*error_theta[2]+5*error[3]
+    F4=0-5*error_theta[1]-5*error_theta[2]+5*error[3]
+
+    #force = sign(rpm)*force_factor*rpm^2
+
+    #u1 = ... F1 ...
+    #u2 = ... F2 ...
+    #u3 = ... F3 ...
+    #u4 = ... F4 ...
+    force_factor = 0.001
+    u1 = sign(F1) * sqrt(abs(F) / force_factor)
+    u2 = sign(F2) *sqrt(abs(F2)/force_factor)
+    u3= sign(F3) *sqrt(abs(F3)/force_factor)
+    u4=sign(F4) *sqrt(abs(F4)/force_factor)
+
     #function rpm_to_force_torque(::QuadrotorWaypoint, rpm::Real, rotor_sign::Int64)
        # force_factor = 0.001
        # torque_factor = 0.0001
@@ -93,7 +109,7 @@ function attitude_controller!(environment, ω_des, dt)
     #  return rpm_torque
  end
  # Define waypoints
- waypoints = [[0.0, 0.0, 0.5], [1.0, 0.0, 0.5], [1.0, 1.0, 0.5], [0.0, 1.0, 0.5], [0.0, 0.0, 0.5]]
+ waypoints = [[1.0, 1.0, 0.3], [2.0, 0, 0.3], [1.0, -1.0, 0.3], [0.0, 0.0, 0.3], [1.0, 1.0, 0.3]]
  current_waypoint_index = 1
  
  # Main controller
