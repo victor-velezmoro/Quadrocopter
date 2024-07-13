@@ -3,7 +3,7 @@ using DojoEnvironments
 using LinearAlgebra
 using Rotations
 
-HORIZON = 2000
+HORIZON = 150
 quadrotor_env = get_environment(:quadrotor_waypoint; horizon=HORIZON)
 ref_position_xyz_world = [0;0;0]
 next_waypoint = 1
@@ -62,10 +62,11 @@ function position_to_quadrotor_orientation_controller(environment, k)
     K_p_xy_roll = K_p_xy_pitch = 0.04
     K_d_xy_roll = K_d_xy_pitch = 0.1
    
+    
     roll_ref = -(K_p_xy_roll * (ref_position_xyz_world[2] - position[2]) + K_d_xy_roll * (0 - linear_velocity[2]))
     pitch_ref = K_p_xy_pitch * (ref_position_xyz_world[1] - position[1]) + K_d_xy_pitch * (0 - linear_velocity[1])
     #plot_dict["reference_traj"][1:3, k] = [roll_ref, pitch_ref, ref_position_xyz_world[2]-position[2]]
-   
+    println("linear_velocity: ", linear_velocity[2], "linear_velocity[1]: ", linear_velocity[1])
     
     return roll_ref, pitch_ref
 end 
@@ -99,6 +100,7 @@ function cascade_controller!(environment, k)
     K_d_thrust = 10 # kinda tuned
     # thrust feedforward is there to compensate gravity and i took the numbers from the cascaded hover example.
     thrust_feedforward = 20 * 5.1 * 1/sqrt(4)#normalize([1;1;1;1])
+    println("roll_ref: ", roll_ref, " pitch_ref: ", "roll: ", roll, " pitch: ", pitch, " yaw_ref: ", yaw_ref, " altitude_ref: ", altitude_ref)
 
     roll_cntrl = K_p_roll * (roll_ref - roll) + K_d_roll * (0 - get_state(environment)[10])
     pitch_cntrl = K_p_pitch * (pitch_ref - pitch) + K_d_pitch * (0 - get_state(environment)[11])
@@ -125,7 +127,7 @@ function fly_through_waypoints_controller!(environment, k)
     global ref_position_xyz_world
     waypoints = 
     [
-        [1;1;0.3],
+        [3;0;0.3],
         [2;0;0.3],
         [1;-1;0.3],
         [0;0;0.3],
