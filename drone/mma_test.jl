@@ -28,6 +28,11 @@ function MMA!(roll, pitch, yaw, thrust)
     u[2] = thrust + roll + pitch - yaw
     u[3] = thrust - roll + pitch + yaw
     u[4] = thrust - roll - pitch - yaw
+
+    # u[1] = 3
+    # u[2] = 0
+    # u[3] = 0
+    # u[4] =0
     return u
 end
 
@@ -100,7 +105,7 @@ function cascade_controller!(environment, k)
     K_d_thrust = 10 # kinda tuned
     # thrust feedforward is there to compensate gravity and i took the numbers from the cascaded hover example.
     thrust_feedforward = 20 * 5.1 * 1/sqrt(4)#normalize([1;1;1;1])
-    println("roll_ref: ", roll_ref, " pitch_ref: ", "roll: ", roll, " pitch: ", pitch, " yaw_ref: ", yaw_ref, " altitude_ref: ", altitude_ref)
+    println("roll_ref: ", roll_ref, "roll: ", roll, "state_xangle: ", get_state(environment)[10], "pitch: ", pitch , "pitch_ref: ", pitch_ref, " yaw_ref: ", yaw_ref)
 
     roll_cntrl = K_p_roll * (roll_ref - roll) + K_d_roll * (0 - get_state(environment)[10])
     pitch_cntrl = K_p_pitch * (pitch_ref - pitch) + K_d_pitch * (0 - get_state(environment)[11])
@@ -127,7 +132,7 @@ function fly_through_waypoints_controller!(environment, k)
     global ref_position_xyz_world
     waypoints = 
     [
-        [3;0;0.3],
+        [1;1;0.3],
         [2;0;0.3],
         [1;-1;0.3],
         [0;0;0.3],
