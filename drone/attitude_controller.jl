@@ -1,7 +1,7 @@
 using Dojo
 using DojoEnvironments
 using LinearAlgebra
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=250)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=250, gravity = 0)
 current_waypoint_index = 0
 des_pos = [0;0;0]
 

@@ -2,51 +2,12 @@ using Dojo
 using DojoEnvironments
 using LinearAlgebra
 using Rotations
+
 # ### Environment
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=200, gravity=0)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=300)
+current_waypoint_index = 0
+des_pos = [0;0;0]
 
-
-
-# ### PID Controller Parameters
-Kp = [2.0, 2.0, 2.0]   # Proportional gain
-Ki = [0.1, 0.1, 0.1]   # Integral gain
-Kd = [0.1, 0.1, 0.1]   # Derivative gain
-trans_mode = normalize([1; 1; 1; 1]) 
-# State for the integral term and previous error
-integral_error = zeros(3)
-previous_error = zeros(3)
-# Function to distribute thrust to the four rotors
-function distribute_thrust(thrust)
-    return [thrust[3], thrust[3], thrust[3], thrust[3]]
-end
-# Velocity controller
-function velocity_controller!(environment, v_des, ω_des, dt)
-    state = get_state(environment)
-    linear_velocity = state[7:9] # vx, vy, vz
-
-    orientation = state[4:6] # axis*angle
-    theta_is = norm(orientation)
-    # Error terms
-    error = v_des .- linear_velocity
-    #thrust = (10 .* error .- 1 .* linear_velocity .+ 5.1) # P, D, feedforward
-    theta_des=error
-    error_theta=theta_des. - theta_is
-
-    attitude_controller!(environment, error_theta, error, dt)
-
-end
-    #bekomme aus orientation, vllt package rotation
-   #u1, u2, u3, u4 rotor speeds die im im quadrat thrust ergeben rpm aus rom to force torque umdrehen
-   #u1 =10+
-
-    #rpm_thrust = distribute_thrust(thrust)  # Map thrust to 4 rotors
-    # rpm_torque = attitude_controller!(environment, ω_des, dt)  # Attitude control
-
-    # # Combine thrust and torque
-    # rpm = rpm_thrust .* 20 .* trans_mode .+ rpm_torque
-    # set_input!(environment, rpm)
-
-# Position controller
 function position_controller!(environment, pos_des, dt)
     state = get_state(environment)
     pos_is = state[1:3]
@@ -55,28 +16,49 @@ function position_controller!(environment, pos_des, dt)
     # Desired angular velocities 
     ω_des = [0.0, 0.0, 0.0]
 
-
     velocity_controller!(environment, v_des, ω_des, dt)
 end
+
+# Velocity controller
+function velocity_controller!(environment, v_des, ω_des, dt)
+    state = get_state(environment)
+    linear_velocity = state[7:9] # vx, vy, vz
+    orientation = state[4:6] # axis*angle
+    theta_is = norm(orientation)
+    # Error terms
+    error = v_des .- linear_velocity
+    theta_des = error
+    error_theta = theta_des .- theta_is
+    #error_theta1 = roll 
+    #error_theta2 = pitch
+    #error_theta3 = yaw
+    attitude_controller!(environment, error_theta, error, dt)
+end
+
 # PID Attitude controller
 function attitude_controller!(environment, error_theta, error, dt)
+    state = get_state(environment)
+    altitude = state[3]
+    z_errror = des_pos[3] - altitude
+    v_z = state[9]
+    thrust_feedforward = 20 * 5.1 * 1/sqrt(4)
 
-    F1=0+5*error_theta[1]+5*error_theta[2]+5*error[3]
-    F2=0-5*error_theta[1]+5*error_theta[2]+5*error[3]
-    F3=0-5*error_theta[1]-5*error_theta[2]+5*error[3]
-    F4=0-5*error_theta[1]-5*error_theta[2]+5*error[3]
+    thrust_output = (10*z_errror - 10* v_z )+ thrust_feedforward
+    F1 = thrust_output+ 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
+    F2 = thrust_output - 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
+    F3 = thrust_output - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
+    F4 = thrust_output - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
 
-    #force = sign(rpm)*force_factor*rpm^2
-
-    #u1 = ... F1 ...
-    #u2 = ... F2 ...
-    #u3 = ... F3 ...
-    #u4 = ... F4 ...
+    # force = sign(rpm)*force_factor*rpm^2
     force_factor = 0.001
-    u1 = sign(F1) * sqrt(abs(F) / force_factor)
-    u2 = sign(F2) *sqrt(abs(F2)/force_factor)
-    u3= sign(F3) *sqrt(abs(F3)/force_factor)
-    u4=sign(F4) *sqrt(abs(F4)/force_factor)
+    u = zeros(4)
+    u[1] =  sign(F1)*sqrt(abs(F1) / force_factor)
+    u[2] =  sign(F2)*sqrt(abs(F2) / force_factor)
+    u[3] = sign(F3)*sqrt(abs(F3) / force_factor)
+    u[4] =  sign(F4)*sqrt(abs(F4) / force_factor)
+
+    set_input!(environment, u)  
+
 
     #function rpm_to_force_torque(::QuadrotorWaypoint, rpm::Real, rotor_sign::Int64)
        # force_factor = 0.001
@@ -87,51 +69,34 @@ function attitude_controller!(environment, error_theta, error, dt)
     
         #return [force;0;0], [torque;0;0]
     #end
+    
+end
 
-    #F=Fg/4+-Kp*(theta_error komponenten addiert)
+# Define waypoints
+waypoints = [[1.0, 1.0, 0.3], [2.0, 0, 0.3], [1.0, -1.0, 0.3], [0.0, 0.0, 0.3], [1.0, 1.0, 0.3]]
+current_waypoint_index = 1
 
-    # global integral_error
-    # global previous_error
+# Main controller
+function controller!(environment, k)
+    global current_waypoint_index
+    global des_pos
 
-    # state = get_state(environment)
-    # angular_velocity = state[10:12] # ωx, ωy, ωz 
-    #  # Error terms
-    #  error = ω_des .- angular_velocity
-    #  integral_error += error * dt
-    #  derivative_error = (error - previous_error) / dt
- 
-    #  torque = Kp .* error .+ Ki .* integral_error .+ Kd .* derivative_error
-    #  previous_error = error
- 
-    #  # Apply the torque to the motors
-    #  rpm_torque = [torque[1], -torque[1], torque[2], -torque[2]]
- 
-    #  return rpm_torque
- end
- # Define waypoints
- waypoints = [[1.0, 1.0, 0.3], [2.0, 0, 0.3], [1.0, -1.0, 0.3], [0.0, 0.0, 0.3], [1.0, 1.0, 0.3]]
- current_waypoint_index = 1
- 
- # Main controller
- function controller!(environment, k)
-     global current_waypoint_index
- 
-     dt = 0.1 # Time step (example value, should be based on actual simulation time step)
- 
-     pos_des = waypoints[current_waypoint_index]  # Current target position
-     position_controller!(environment, pos_des, dt)
- 
-     # Move to the next waypoint if close enough to the current one
-     current_pos = get_state(environment)[1:3]
-     if norm(current_pos .- pos_des) < 0.1
-         current_waypoint_index = current_waypoint_index % length(waypoints) + 1
-     end
- 
- end
- # ### Simulate
- initialize!(quadrotor_env, :quadrotor)
- simulate!(quadrotor_env, controller!; record=true)
- 
- # ### Visualize
- vis = visualize(quadrotor_env)
- render(vis)
+    dt = 0.1 # Time step 
+
+    pos_des = waypoints[current_waypoint_index]  # Current target position
+    position_controller!(environment, pos_des, dt)
+
+    # Move to the next waypoint if close enough to the current one
+    current_pos = get_state(environment)[1:3]
+    if norm(current_pos .- pos_des) < 0.1
+        current_waypoint_index = current_waypoint_index % length(waypoints) + 1
+    end
+end
+
+# ### Simulate
+initialize!(quadrotor_env, :quadrotor)
+simulate!(quadrotor_env, controller!; record=true)
+
+# ### Visualize
+vis = visualize(quadrotor_env)
+render(vis)

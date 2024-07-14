@@ -3,8 +3,8 @@ using DojoEnvironments
 using LinearAlgebra
 using Rotations
 
-HORIZON = 150
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=HORIZON)
+HORIZON = 300
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=HORIZON, gravity=0.0)
 ref_position_xyz_world = [0;0;0]
 next_waypoint = 1
 state_traj = zeros(size(get_state(quadrotor_env))[1], HORIZON)
@@ -12,18 +12,11 @@ state_traj = zeros(size(get_state(quadrotor_env))[1], HORIZON)
 reference_traj = zeros(4, HORIZON)
 plot_dict = Dict("state_traj" => state_traj, "reference_traj" => reference_traj)
 
-# function get_transformation_body_to_world(x, y, z, roll, pitch, yaw)
-#     R = RotXYZ(roll, pitch, yaw)
-#     R_matrix = convert(Array{Float64, 2}, R) # Convert to matrix
-#     println("R_matrix: ", R_matrix)
-    
-#     position_w = [x, y, z]
-#     T_world_to_body = [R_matrix' -R_matrix' * position_w; 0 0 0 1]
-#     return T_world_to_body
-# end
+
 
 function MMA!(roll, pitch, yaw, thrust)
     u = zeros(4)
+    thrust = 0.0
     u[1] = thrust + roll - pitch + yaw
     u[2] = thrust + roll + pitch - yaw
     u[3] = thrust - roll + pitch + yaw
@@ -54,15 +47,7 @@ function position_to_quadrotor_orientation_controller(environment, k)
     position = get_state(environment)[1:3]
     roll, pitch, yaw = get_state(environment)[4:6]
     linear_velocity = get_state(environment)[7:9]
-    
-    # transformation_b_w = get_transformation_body_to_world(position[1], position[2], position[3], roll, pitch, yaw) 
-    # println("transformation_b_w: ", transformation_b_w)
-    # ref_position_b = transformation_b_w * [ref_position_xyz_world;1]
-    # ref_position_b = ref_position_b[1:3]
-    # ref_position_b = ref_position_xyz_world
-    # println("current position: , $position")
-    # plot_dict["state_traj"][:, k] = get_state(environment)
-    # println("ref_position_b: ", ref_position_b)  
+ 
    
     K_p_xy_roll = K_p_xy_pitch = 0.04
     K_d_xy_roll = K_d_xy_pitch = 0.1
@@ -83,8 +68,6 @@ function cascade_controller!(environment, k)
     # get the current system values
     roll, pitch, yaw, altitude = sensing_and_estimation(environment)
     println("states : $(sensing_and_estimation(environment))")
-    # set some reference - TODO - make this to be set from outside or smth
-    #roll_ref, pitch_ref, yaw_ref, altitude_ref = [0.0, 0.0, 1.57, 1]
     roll_ref, pitch_ref, = position_to_quadrotor_orientation_controller(environment, k)
     println("roll ref: $roll_ref, pitch_ref: $pitch_ref")
     yaw_ref = 0 #1.57
