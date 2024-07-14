@@ -96,6 +96,44 @@ function controller!(environment, k)
     end
 end
 
+function check_waypoints!(environment, k)
+
+    global current_waypoint_index
+    global des_pos
+    waypoints = [[1.0, 1.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
+    # waypoints = 
+    # [[1,1;0.3],
+    #     [2;0;0.3],
+    #     [1;-1;0.3],
+    #     [0;0;0.3],
+    # ]
+
+ 
+    current_pos = get_state(environment)[1:3]
+    if norm(current_pos - des_pos) < 1e-1 && current_waypoint_index < length(waypoints)
+        current_waypoint_index = current_waypoint_index % length(waypoints) + 1 
+        #current_waypoint_index = 2
+
+        println("Next waypoint: ", waypoints[current_waypoint_index])
+        # des_pos = waypoints[current_waypoint_index]
+    end
+
+    # if norm(get_state(environment)[1:3]-waypoints[current_waypoint_index]) < 1e-1
+    #     if current_waypoint_index < 4
+    #         println("next_waypoint: ", current_waypoint_index)
+    #         current_waypoint_index += 1
+    #     end
+    # end
+    des_pos = waypoints[current_waypoint_index]
+   
+    println("Des_pos: ", des_pos)
+    println("current_pos: ", current_pos)
+    println("current_waypoint_index: ", current_waypoint_index)
+
+    attitude_controller!(environment, k)
+
+end
+
 # ### Simulate
 initialize!(quadrotor_env, :quadrotor)
 simulate!(quadrotor_env, controller!; record=true)
