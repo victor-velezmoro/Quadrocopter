@@ -73,7 +73,7 @@ function attitude_controller!(environment, error_theta, error, dt)
     #u3 = ... F3 ...
     #u4 = ... F4 ...
     force_factor = 0.001
-    u1 = sign(F1) * sqrt(abs(F) / force_factor)
+    u1 = sign(F1) * sqrt(abs(F1) / force_factor)
     u2 = sign(F2) *sqrt(abs(F2)/force_factor)
     u3= sign(F3) *sqrt(abs(F3)/force_factor)
     u4=sign(F4) *sqrt(abs(F4)/force_factor)

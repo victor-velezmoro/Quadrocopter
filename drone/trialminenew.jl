@@ -4,7 +4,7 @@ using LinearAlgebra
 using Rotations
 
 # ### Environment
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=1000, gravity=0)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=1000)
 
 function position_controller!(environment, pos_des, dt)
     state = get_state(environment)
@@ -32,17 +32,19 @@ end
 
 # PID Attitude controller
 function attitude_controller!(environment, error_theta, error, dt)
-    F1 = 0 + 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
-    F2 = 0 - 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
-    F3 = 0 - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
-    F4 = 0 - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
+
+    F1 = 30 + 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
+    F2 = 30 - 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
+    F3 = 30 - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
+    F4 = 30 - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
 
     # force = sign(rpm)*force_factor*rpm^2
     force_factor = 0.001
-    u1 =  sign(F1)*sqrt(abs(F1) / force_factor)
-    u2 =  sign(F2)*sqrt(abs(F2) / force_factor)
-    u3 = sign(F3)*sqrt(abs(F3) / force_factor)
-    u4 =  sign(F4)*sqrt(abs(F4) / force_factor)
+    u = zeros(4)
+    u[1] =  sign(F1)*sqrt(abs(F1) / force_factor)
+    u[2] =  sign(F2)*sqrt(abs(F2) / force_factor)
+    u[3] = sign(F3)*sqrt(abs(F3) / force_factor)
+    u[4]=  sign(F4)*sqrt(abs(F4) / force_factor)
     #function rpm_to_force_torque(::QuadrotorWaypoint, rpm::Real, rotor_sign::Int64)
        # force_factor = 0.001
        # torque_factor = 0.0001
@@ -52,7 +54,7 @@ function attitude_controller!(environment, error_theta, error, dt)
     
         #return [force;0;0], [torque;0;0]
     #end
-    
+    set_input!(environment, u)  
 end
 
 # Define waypoints
