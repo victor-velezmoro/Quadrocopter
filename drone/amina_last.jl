@@ -26,13 +26,14 @@ function velocity_controller!(environment, v_des, ω_des, dt)
     orientation = state[4:6] # axis*angle
     theta_is = norm(orientation)
     # Error terms
-    error = v_des .- linear_velocity
+    error = v_des .- linear_velocity  #PD missing what to use for D
     theta_des = error
     error_theta = theta_des .- theta_is
     #error_theta1 = roll 
     #error_theta2 = pitch
     #error_theta3 = yaw
     attitude_controller!(environment, error_theta, error, dt)
+    
 end
 
 # PID Attitude controller
@@ -48,6 +49,7 @@ function attitude_controller!(environment, error_theta, error, dt)
     F2 = thrust_output - 5 * error_theta[1] + 5 * error_theta[2] + 5 * error[3]
     F3 = thrust_output - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
     F4 = thrust_output - 5 * error_theta[1] - 5 * error_theta[2] + 5 * error[3]
+    # for thrust use factor (gewichtskraft/4, da 4 rotoren )
 
     # force = sign(rpm)*force_factor*rpm^2
     force_factor = 0.001
@@ -56,7 +58,8 @@ function attitude_controller!(environment, error_theta, error, dt)
     u[2] =  sign(F2)*sqrt(abs(F2) / force_factor)
     u[3] = sign(F3)*sqrt(abs(F3) / force_factor)
     u[4] =  sign(F4)*sqrt(abs(F4) / force_factor)
-
+    #weiß nicht so recht für was das ist 
+    
     set_input!(environment, u)  
 
 
