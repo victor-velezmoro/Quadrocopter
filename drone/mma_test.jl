@@ -21,6 +21,13 @@ function MMA!(roll, pitch, yaw, thrust)
     u[3] = thrust - roll + pitch + yaw
     u[4] = thrust - roll - pitch - yaw
 
+    # u[3] = output_thrust + output_roll + output_pitch + output_yaw
+    # u[4] = output_thrust - output_roll + output_pitch - output_yaw
+    # u[2] = output_thrust + output_roll - output_pitch - output_yaw
+    # u[1] = output_thrust - output_roll - output_pitch + output_yaw
+    
+
+
     # u[1] = 3
     # u[2] = 0
     # u[3] = 0

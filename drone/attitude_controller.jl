@@ -1,7 +1,7 @@
 using Dojo
 using DojoEnvironments
 using LinearAlgebra
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=250)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=500)
 current_waypoint_index = 0
 des_pos = [0;0;0]
 
@@ -14,13 +14,14 @@ function check_waypoints!(environment, k)
 
     global current_waypoint_index
     global des_pos
-    waypoints = [[0.0, 2.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
-    # waypoints = 
-    # [[1,1;0.3],
-    #     [2;0;0.3],
-    #     [1;-1;0.3],
-    #     [0;0;0.3],
-    # ]
+     waypoints = 
+    #  [[1.0, 1.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
+    [
+        [0.0;1.0;0.3],
+        [2.0;0.0;0.3],
+        [1;-1;0.3],
+        [0;0;0.3],
+    ]
 
  
     current_pos = get_state(environment)[1:3]
@@ -115,6 +116,20 @@ function attitude_controller!(environment, k)
     des_all = des_pos[3] -position[3] 
 
     thrust_feedforward = 20 * 5.1 * 1/sqrt(4)
+    gravity = 9.81  # Acceleration due to gravity in m/s^2
+    mass = 1.04     # Mass of the drone in kg
+    num_rotors = 4  # Number of rotors
+
+    # Calculate total gravitational force acting on the drone
+    total_weight = mass * gravity
+
+    # Calculate thrust required per rotor for hover
+    force = total_weight / num_rotors
+    force_factor = 0.001
+    rpm = sqrt(abs(force) / force_factor)
+    rpm_new = sign(force) * rpm
+    println("rpm_new: ", rpm_new)
+
 
     des_roll, des_pitch = position_controller!(environment, k)
     println("des_roll: ", des_roll, "current roll: ", current_roll, " des_pitch: ", des_pitch, "current pitch: ", current_pitch)
@@ -123,7 +138,8 @@ function attitude_controller!(environment, k)
     output_pitch = K_P_2 * (des_pitch - current_pitch) + K_D_2 * (0 - angular_velocity[2])  
     output_yaw = K_P_2 * (des_yaw - current_yaw) + K_D_2 * (0 - angular_velocity[3])
     #output_thrust = (10*error_z - 10* v_z )+ thrust_feedforward
-    output_thrust = K_p_thrust * (des_all - altitude) + K_d_thrust * (0 - get_state(environment)[9])+ thrust_feedforward
+    output_thrust = K_p_thrust * (des_all - altitude) + K_d_thrust * (0 - get_state(environment)[9])+ rpm_new
+    output_thrust = rpm_new
     println("output_roll: ", output_roll, " output_pitch: ", output_pitch, " output_yaw: ", output_yaw, " output_thrust: ", output_thrust)
 
     u = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
@@ -140,10 +156,16 @@ function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
     # u[3] = output_thrust + output_yaw - output_pitch + output_roll 
     # u[4] = output_thrust - output_yaw + output_pitch + output_roll 
 
-    u[3] = output_thrust + output_roll + output_pitch + output_yaw
-    u[4] = output_thrust - output_roll + output_pitch - output_yaw
-    u[2] = output_thrust + output_roll - output_pitch - output_yaw
-    u[1] = output_thrust - output_roll - output_pitch + output_yaw
+    u[3] = output_thrust + output_roll + 0 + 0
+    u[4] = output_thrust - output_roll + 0 - 0
+    u[2] = output_thrust + output_roll - 0 - 0
+    u[1] = output_thrust - output_roll - 0 + 0
+
+    # u[1] = 50
+    # u[2] = 50
+    # u[3] = 55
+    # u[4] = 55
+
 
     return u
 end
