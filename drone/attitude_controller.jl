@@ -10,6 +10,30 @@ function controller!(environment, k)
     check_waypoints!(environment, k)
 end
 
+function convert_axis_angle_to_euler(state)
+    # Extract the axis-angle representation from the state vector
+    orientation = state[4:6]
+    angle = norm(orientation)  # The angle is the norm of the axis*angle representation
+    axis = orientation / angle  # Normalize to get the axis
+
+    # Create an AngleAxis object
+    R = AngleAxis(angle, axis[1], axis[2], axis[3])
+
+    roll, pitch, yaw = rotation_angel(R)
+
+    println("roll: ", roll, " pitch: ", pitch, " yaw: ", yaw)
+
+
+
+    # # Convert AngleAxis to a rotation matrix
+    # rotation_matrix = RotMatrix(angle_axis)
+
+    # # Convert the rotation matrix to Euler angles (roll, pitch, yaw)
+    # euler_angles = euler(rotation_matrix, ZYX)  # Default order is ZYX for roll, pitch, yaw
+
+    return euler_angles
+end
+
 function check_waypoints!(environment, k)
 
     global current_waypoint_index
@@ -17,10 +41,7 @@ function check_waypoints!(environment, k)
      waypoints = 
     #  [[1.0, 1.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
     [
-        [0.0;1.0;0.3],
-        [2.0;0.0;0.3],
-        [1;-1;0.3],
-        [0;0;0.3],
+        [1;0;0.5],
     ]
 
  
@@ -138,8 +159,8 @@ function attitude_controller!(environment, k)
     output_pitch = K_P_2 * (des_pitch - current_pitch) + K_D_2 * (0 - angular_velocity[2])  
     output_yaw = K_P_2 * (des_yaw - current_yaw) + K_D_2 * (0 - angular_velocity[3])
     #output_thrust = (10*error_z - 10* v_z )+ thrust_feedforward
-    output_thrust = K_p_thrust * (des_all - altitude) + K_d_thrust * (0 - get_state(environment)[9])+ rpm_new
-    output_thrust = rpm_new
+    output_thrust = 1 * (des_all - altitude) + 2 * (0 - get_state(environment)[9]) + rpm_new
+    # output_thrust = rpm_new
     println("output_roll: ", output_roll, " output_pitch: ", output_pitch, " output_yaw: ", output_yaw, " output_thrust: ", output_thrust)
 
     u = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
@@ -156,10 +177,10 @@ function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
     # u[3] = output_thrust + output_yaw - output_pitch + output_roll 
     # u[4] = output_thrust - output_yaw + output_pitch + output_roll 
 
-    u[3] = output_thrust + output_roll + 0 + 0
-    u[4] = output_thrust - output_roll + 0 - 0
-    u[2] = output_thrust + output_roll - 0 - 0
-    u[1] = output_thrust - output_roll - 0 + 0
+    u[3] = output_thrust + output_roll + output_pitch + 0
+    u[4] = output_thrust - output_roll + output_pitch - 0
+    u[2] = output_thrust + output_roll - output_pitch - 0
+    u[1] = output_thrust - output_roll - output_pitch + 0
 
     # u[1] = 50
     # u[2] = 50
