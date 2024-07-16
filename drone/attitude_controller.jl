@@ -2,7 +2,7 @@ using Dojo
 using DojoEnvironments
 using LinearAlgebra
 using PyPlot
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=700)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=2000)
 current_waypoint_index = 0
 des_pos = [0;0;0]
 
@@ -40,14 +40,11 @@ function check_waypoints!(environment, k)
     global current_waypoint_index
     global des_pos
      waypoints = 
-    #  [[1.0, 1.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
-    [
-        [0;0;1],
-    ]
-
+    [[1.0, 1.0, 0.5], [2.0, 0.0, 0.5], [1.0, -1.0, 0.5], [0.0, 0.0, 0.5]]
+    
  
     current_pos = get_state(environment)[1:3]
-    if norm(current_pos - des_pos) < 1e-1 && current_waypoint_index < length(waypoints)
+    if norm(current_pos - des_pos) < 0.1 && current_waypoint_index < length(waypoints)
         current_waypoint_index = current_waypoint_index % length(waypoints) + 1 
         #current_waypoint_index = 2
 
@@ -105,15 +102,16 @@ function position_controller!(environment, k)
     #This loop translates position errors into desired roll angles.
     K_P_1 = 0.04
     K_D_1= 0.1
+    des_vel = des_pos .- position
     println("k ", k)
     println("Des_pos: ", des_pos)
     println("current_pos: ", position)
-    # des_roll = -(K_P_1 * (des_pos[2] - position[2]) + K_D_1 * (0 - linear_velocity[2]))
-    # des_pitch = K_P_1 * (des_pos[1] - position[1]) + K_D_1 * (0 - linear_velocity[1])
 
 
-    des_pitch = (K_P_1 * (des_pos[1]-position[1]) + K_D_1 * (0 - linear_velocity[1]))
-    des_roll = -(K_P_1 * (des_pos[2]-position[2]) + K_D_1 * (0 - linear_velocity[2]))
+
+    # des_pitch = (K_P_1 * (des_pos[1]-position[1]) + K_D_1 * (0 - linear_velocity[1]))
+    des_pitch= (0.01 * (des_vel[1] - linear_velocity[1]) + K_D_1 * (0 - linear_velocity[1]) + (0.04 * (des_pos[1] - position[1])))
+    des_roll = -((0.01 * (des_vel[2] - linear_velocity[2]) + K_D_1 * (0 - linear_velocity[2]) + (0.04 * (des_pos[2] - position[2]))))
 
     # print("des_roll: ", des_roll, " des_pitch: ", des_pitch)
 
@@ -207,8 +205,6 @@ function attitude_controller!(environment, k)
 
     position, orientation, linear_velocity, angular_velocity, current_roll, current_pitch, current_yaw, altitude, des_pos, current_waypoint_index = state_provider!(environment)
 
-    K_P_2 = 2
-    K_D_2 = 2
     error_z = des_pos[3] - altitude
     v_z = linear_velocity[3]
     des_yaw = 0.0
@@ -230,12 +226,17 @@ function attitude_controller!(environment, k)
     rpm = sqrt(abs(force) / force_factor)
     rpm_new = sign(force) * rpm 
     push!(rpm_new_list, rpm_new)
+    
 
     des_roll, des_pitch = position_controller!(environment, k)
-    output_roll = 1 * (des_roll - current_roll) + 0.5 * (0 - angular_velocity[1])
-    output_pitch = 1 * (des_pitch - current_pitch) + 0.5 * (0 - angular_velocity[2])  
-    output_yaw = K_P_2 * (des_yaw - current_yaw) + K_D_2 * (0 - angular_velocity[3])
-    output_thrust = 1 * ((des_all+0.3) - altitude) + 0.1 * (0 - get_state(environment)[9]) + 3 *(error_z - linear_velocity[3])+ rpm_new 
+    output_roll = 3 * (des_roll - current_roll) + 1 * (0 - angular_velocity[1])
+    output_pitch = 3 * (des_pitch - current_pitch) + 1 * (0 - angular_velocity[2])  
+    output_yaw = 3 * (des_yaw - current_yaw) + 1 * (0 - angular_velocity[3])
+    output_thrust = 5 * ((des_all+0.3) - altitude) + 5 * (0 - get_state(environment)[9]) + 3 *(error_z - linear_velocity[3])+ rpm_new 
+    #output_thrust = rpm_new
+    # output_thrust = 10 * (des_all - altitude) + 10 * (0 - get_state(environment)[9])+ thrust_feedforward
+    println("thrust: ", output_thrust)
+
 
 
     # Store values in lists
@@ -288,7 +289,7 @@ function plot_attitude_controller_data()
     plot(current_pitch_list, label="Current Pitch")
     plot(angular_velocity_pitch_list, label="Angular Velocity Pitch")
     plot(output_pitch_list, label="Output Pitch")
-    legend()
+    # legend()
     title("Pitch Control")
 
     subplot(2, 2, 3)
@@ -318,7 +319,7 @@ function plot_attitude_controller_data()
 
 
     tight_layout()
-    savefig("attitude_controller_plot_altitude.png")
+    savefig("attitude_controller_plot_test_for_pitch2.png")
 end
 
 
@@ -329,7 +330,6 @@ function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
     # u[2] = output_thrust - output_yaw + output_pitch - output_roll 
     # u[3] = output_thrust + output_yaw - output_pitch + output_roll 
     # u[4] = output_thrust - output_yaw + output_pitch + output_roll 
-
     u[3] = output_thrust + output_roll + output_pitch + 0
     u[4] = output_thrust - output_roll + output_pitch - 0
     u[2] = output_thrust + output_roll - output_pitch - 0
@@ -344,7 +344,13 @@ function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
     return u
 end
 
-initialize!(quadrotor_env, :quadrotor, body_orientation=Dojo.RotZ(-π/4))
+# Define the initial position and orientation
+initial_position = 1  # Replace with your desired initial position
+initial_orientation = Dojo.RotZ(-π/4)
+
+# Initialize the environment with the specified initial position and orientation
+initialize!(quadrotor_env, :quadrotor, body_orientation= Dojo.RotZ(-π/4))
+# initialize!(quadrotor_env, :quadrotor, body_orientation=Dojo.RotZ(-π/4))
 simulate!(quadrotor_env, controller!; record=true)
 
 plot_attitude_controller_data()

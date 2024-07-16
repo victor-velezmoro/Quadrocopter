@@ -3,7 +3,7 @@ using DojoEnvironments
 using LinearAlgebra
 using Rotations
 
-HORIZON = 300
+HORIZON = 400
 quadrotor_env = get_environment(:quadrotor_waypoint; horizon=HORIZON)
 ref_position_xyz_world = [0;0;0]
 next_waypoint = 1
@@ -27,7 +27,6 @@ function MMA!(roll, pitch, yaw, thrust)
     # u[1] = output_thrust - output_roll - output_pitch + output_yaw
     
 
-
     # u[1] = 3
     # u[2] = 0
     # u[3] = 0
@@ -46,8 +45,8 @@ function sensing_and_estimation(environment)
     altitude = position[3]
     roll, pitch, yaw = orientation
     
-    euler_angles = convert_axis_angle_to_euler(environment)
-    println("euler_angles: ", euler_angles)
+    #euler_angles = convert_axis_angle_to_euler(environment)
+    #println("euler_angles: ", euler_angles)
     
     return roll, pitch, yaw, altitude
 end
@@ -136,6 +135,7 @@ function cascade_controller!(environment, k)
     println("roll_cntrl: ", roll_cntrl, " pitch_cntrl: ", pitch_cntrl, " yaw_cntrl: ", yaw_cntrl, " thrust: ", thrust)
     u = MMA!(roll_cntrl, pitch_cntrl, yaw_cntrl, thrust)
     println("u: ", u)
+    println("angular_velocity: ", get_state(environment)[10])
     set_input!(environment, u)
 
 end
@@ -154,8 +154,8 @@ function fly_through_waypoints_controller!(environment, k)
     global ref_position_xyz_world
     waypoints = 
     [
-        [1;1;0.3],
-        [2;0;0.3],
+        [1;0;0.5],
+        [1;0;0.5],
         [1;-1;0.3],
         [0;0;0.3],
     ]
@@ -171,7 +171,7 @@ function fly_through_waypoints_controller!(environment, k)
     cascade_controller!(environment, k)
 end
 
-initialize!(quadrotor_env, :quadrotor, body_orientation=Dojo.RotZ(0))
+initialize!(quadrotor_env, :quadrotor, body_orientation=Dojo.RotZ(-pi/4))
 simulate!(quadrotor_env, controller!; record=true)
 
 vis = visualize(quadrotor_env)
