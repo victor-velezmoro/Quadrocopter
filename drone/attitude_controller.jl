@@ -1,7 +1,8 @@
 using Dojo
 using DojoEnvironments
 using LinearAlgebra
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=500)
+using PyPlot
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=700)
 current_waypoint_index = 0
 des_pos = [0;0;0]
 
@@ -19,17 +20,17 @@ function convert_axis_angle_to_euler(state)
     # Create an AngleAxis object
     R = AngleAxis(angle, axis[1], axis[2], axis[3])
 
-    roll, pitch, yaw = rotation_angel(R)
+    # roll, pitch, yaw = rotation_angel(R)
 
-    println("roll: ", roll, " pitch: ", pitch, " yaw: ", yaw)
+    # println("roll: ", roll, " pitch: ", pitch, " yaw: ", yaw)
 
 
 
-    # # Convert AngleAxis to a rotation matrix
-    # rotation_matrix = RotMatrix(angle_axis)
+    # Convert AngleAxis to a rotation matrix
+    rotation_matrix = RotMatrix(angle_axis)
 
-    # # Convert the rotation matrix to Euler angles (roll, pitch, yaw)
-    # euler_angles = euler(rotation_matrix, ZYX)  # Default order is ZYX for roll, pitch, yaw
+    # Convert the rotation matrix to Euler angles (roll, pitch, yaw)
+    euler_angles = euler(rotation_matrix, ZYX)  # Default order is ZYX for roll, pitch, yaw
 
     return euler_angles
 end
@@ -41,7 +42,7 @@ function check_waypoints!(environment, k)
      waypoints = 
     #  [[1.0, 1.0, 0.5], [2.0, -1.0, 0.5], [1.0, -1.0, 0.5], [0.0, 1.0, 0.5]]
     [
-        [1;0;0.5],
+        [0;0;1],
     ]
 
  
@@ -103,7 +104,7 @@ function position_controller!(environment, k)
     
     #This loop translates position errors into desired roll angles.
     K_P_1 = 0.04
-    K_D_1= 0.04
+    K_D_1= 0.1
     println("k ", k)
     println("Des_pos: ", des_pos)
     println("current_pos: ", position)
@@ -120,15 +121,94 @@ function position_controller!(environment, k)
 
 end
 
+# function attitude_controller!(environment, k)
+#     # here we will calculate the controll commands using ref and current state 
+#     global des_pos
+#     global current_waypoint_index
+
+#     position, orientation, linear_velocity, angular_velocity, current_roll, current_pitch, current_yaw, altitude, des_pos, current_waypoint_index = state_provider!(environment)
+
+#     K_P_2 = 2
+#     K_D_2 = 2
+#     error_z = des_pos[3] - altitude
+#     v_z = linear_velocity[3]
+#     des_yaw = 0.0
+#     K_p_thrust = 10 
+#     K_d_thrust = 10
+#     des_all = des_pos[3] -position[3] 
+
+#     thrust_feedforward = 20 * 5.1 * 1/sqrt(4)
+#     gravity = 9.81  # Acceleration due to gravity in m/s^2
+#     mass = 1.04     # Mass of the drone in kg
+#     num_rotors = 4  # Number of rotors
+
+#     # Calculate total gravitational force acting on the drone
+#     total_weight = mass * gravity
+
+#     # Calculate thrust required per rotor for hover
+#     force = total_weight / num_rotors
+#     force_factor = 0.001
+#     rpm = sqrt(abs(force) / force_factor)
+#     rpm_new = sign(force) * rpm
+#     println("rpm_new: ", rpm_new)
+
+
+#     des_roll, des_pitch = position_controller!(environment, k)
+#     println("des_roll: ", des_roll, "current roll: ", current_roll, "angular_velocity: ", angular_velocity[1], "output_roll: ", K_P_2 * (des_roll - current_roll) + K_D_2 * (0 - angular_velocity[1]))
+#     println("des_pitch: ", des_pitch, "current pitch: ", current_pitch, "angular_velocity: ", angular_velocity[2], "output_pitch: ", K_P_2 * (des_pitch - current_pitch) + K_D_2 * (0 - angular_velocity[2]))
+    
+#     output_roll = K_P_2 * (des_roll - current_roll) + K_D_2 * (0 - angular_velocity[1])
+#     output_pitch = K_P_2 * (des_pitch - current_pitch) + K_D_2 * (0 - angular_velocity[2])  
+#     output_yaw = K_P_2 * (des_yaw - current_yaw) + K_D_2 * (0 - angular_velocity[3])
+#     #output_thrust = (10*error_z - 10* v_z )+ thrust_feedforward
+#     output_thrust = 1 * (des_all - altitude) + 2 * (0 - get_state(environment)[9]) + rpm_new
+#     # output_thrust = rpm_new
+#     println("output_roll: ", output_roll, " output_pitch: ", output_pitch, " output_yaw: ", output_yaw, " output_thrust: ", output_thrust)
+
+#     u = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
+#     print("u: ", u)
+#     set_input!(environment, u)  
+# end
+
+global rpm_new_list = []
+global des_roll_list = []
+global current_roll_list = []
+global angular_velocity_roll_list = []
+global output_roll_list = []
+global des_pitch_list = []
+global current_pitch_list = []
+global angular_velocity_pitch_list = []
+global output_pitch_list = []
+global output_yaw_list = []
+global output_thrust_list = []
+global des_altitude_list = []
+global position_list = []
+global all_error_list = []
+global z_ang_vel_list = []
+
 function attitude_controller!(environment, k)
-    # here we will calculate the controll commands using ref and current state 
     global des_pos
     global current_waypoint_index
+    global rpm_new_list
+    global des_roll_list
+    global current_roll_list
+    global angular_velocity_roll_list
+    global output_roll_list
+    global des_pitch_list
+    global current_pitch_list
+    global angular_velocity_pitch_list
+    global output_pitch_list
+    global output_yaw_list
+    global output_thrust_list
+    global des_altitude_list
+    global position_list
+    global all_error_list
+    global z_ang_vel_list
 
     position, orientation, linear_velocity, angular_velocity, current_roll, current_pitch, current_yaw, altitude, des_pos, current_waypoint_index = state_provider!(environment)
 
-    K_P_2 = 4.0
-    K_D_2 = 1
+    K_P_2 = 2
+    K_D_2 = 2
     error_z = des_pos[3] - altitude
     v_z = linear_velocity[3]
     des_yaw = 0.0
@@ -148,24 +228,97 @@ function attitude_controller!(environment, k)
     force = total_weight / num_rotors
     force_factor = 0.001
     rpm = sqrt(abs(force) / force_factor)
-    rpm_new = sign(force) * rpm
-    println("rpm_new: ", rpm_new)
-
+    rpm_new = sign(force) * rpm 
+    push!(rpm_new_list, rpm_new)
 
     des_roll, des_pitch = position_controller!(environment, k)
-    println("des_roll: ", des_roll, "current roll: ", current_roll, " des_pitch: ", des_pitch, "current pitch: ", current_pitch)
-    
-    output_roll = K_P_2 * (des_roll - current_roll) + K_D_2 * (0 - angular_velocity[1])
-    output_pitch = K_P_2 * (des_pitch - current_pitch) + K_D_2 * (0 - angular_velocity[2])  
+    output_roll = 1 * (des_roll - current_roll) + 0.5 * (0 - angular_velocity[1])
+    output_pitch = 1 * (des_pitch - current_pitch) + 0.5 * (0 - angular_velocity[2])  
     output_yaw = K_P_2 * (des_yaw - current_yaw) + K_D_2 * (0 - angular_velocity[3])
-    #output_thrust = (10*error_z - 10* v_z )+ thrust_feedforward
-    output_thrust = 1 * (des_all - altitude) + 2 * (0 - get_state(environment)[9]) + rpm_new
-    # output_thrust = rpm_new
-    println("output_roll: ", output_roll, " output_pitch: ", output_pitch, " output_yaw: ", output_yaw, " output_thrust: ", output_thrust)
+    output_thrust = 1 * ((des_all+0.3) - altitude) + 0.1 * (0 - get_state(environment)[9]) + 3 *(error_z - linear_velocity[3])+ rpm_new 
+
+
+    # Store values in lists
+    push!(des_roll_list, des_roll)
+    push!(current_roll_list, current_roll)
+    push!(angular_velocity_roll_list, angular_velocity[1])
+    push!(output_roll_list, output_roll)
+    push!(des_pitch_list, des_pitch)
+    push!(current_pitch_list, current_pitch)
+    push!(angular_velocity_pitch_list, angular_velocity[2])
+    push!(des_altitude_list, des_pos[3])
+    push!(output_pitch_list, output_pitch)
+    push!(output_yaw_list, output_yaw)
+    push!(output_thrust_list, output_thrust)
+    push!(position_list, altitude)
+    push!(all_error_list, des_all)
+    push!(z_ang_vel_list, linear_velocity[3])
 
     u = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
-    print("u: ", u)
     set_input!(environment, u)  
+end
+
+function plot_attitude_controller_data()
+    global rpm_new_list
+    global des_roll_list
+    global current_roll_list
+    global angular_velocity_roll_list
+    global output_roll_list
+    global des_pitch_list
+    global current_pitch_list
+    global angular_velocity_pitch_list
+    global output_pitch_list
+    global output_yaw_list
+    global output_thrust_list
+    global des_altitude_list
+    global all_error_list
+    global z_ang_vel_list
+
+    figure()
+    subplot(2, 2, 1)
+    plot(des_roll_list, label="Desired Roll")
+    plot(current_roll_list, label="Current Roll")
+    plot(angular_velocity_roll_list, label="Angular Velocity Roll")
+    plot(output_roll_list, label="Output Roll")
+    legend()
+    title("Roll Control")
+
+    subplot(2, 2, 2)
+    plot(des_pitch_list, label="Desired Pitch")
+    plot(current_pitch_list, label="Current Pitch")
+    plot(angular_velocity_pitch_list, label="Angular Velocity Pitch")
+    plot(output_pitch_list, label="Output Pitch")
+    legend()
+    title("Pitch Control")
+
+    subplot(2, 2, 3)
+    plot(des_roll_list, label="Desired Roll")
+    plot(current_roll_list, label="Current Roll")
+    plot(angular_velocity_roll_list, label="Angular Velocity Roll")
+    plot(output_roll_list, label="Output Roll")
+    title("Roll")
+
+    # subplot(2, 2, 4)
+    # # plot(output_thrust_list, label="Output Thrust")
+    # # plot(rpm_new_list, label="RPM New")
+    # plot(des_pitch_list, label="Desired Pitch")
+    # plot(current_pitch_list, label="Current Pitch")
+    # plot(angular_velocity_pitch_list, label="Angular Velocity Pitch")
+    # plot(output_pitch_list, label="Output Pitch")
+    # title("Thrust Control")
+    subplot(2, 2, 4)
+    # plot(output_thrust_list, label="Output Thrust")
+    # plot(rpm_new_list, label="RPM New")
+    plot(des_altitude_list, label="Desired Altitude")
+    plot(position_list, label="Current Altitude")
+    plot(all_error_list, label="Error")
+    plot(z_ang_vel_list, label="Z Angular Velocity")
+    #plot(output_thrust_list, label="Output Thrust")
+    title("Thrust Control")
+
+
+    tight_layout()
+    savefig("attitude_controller_plot_altitude.png")
 end
 
 
@@ -194,7 +347,10 @@ end
 initialize!(quadrotor_env, :quadrotor, body_orientation=Dojo.RotZ(-π/4))
 simulate!(quadrotor_env, controller!; record=true)
 
-### Visualize
+plot_attitude_controller_data()
+println("Done")
+
+## Visualize
 vis = visualize(quadrotor_env)
 render(vis)
 
