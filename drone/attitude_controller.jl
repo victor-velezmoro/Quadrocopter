@@ -169,12 +169,14 @@ function attitude_controller!(environment, k)
     
 
     des_roll, des_pitch = position_controller!(environment, k)
-
+    #Thrust output 
+    output_thrust = 5 * ((des_all+0.3) - altitude) + 5 * (0 - get_state(environment)[9]) + 3 *(error_z - linear_velocity[3])+ rpm_new 
+    #Output roll, pitch and yaw
     output_roll = 3 * (des_roll - current_roll) + 1 * (0 - angular_velocity[1])
     output_pitch = 3 * (des_pitch - current_pitch) + 1 * (0 - angular_velocity[2])  
     output_yaw = 3 * (des_yaw - current_yaw) + 1 * (0 - angular_velocity[3])
-    output_thrust = 5 * ((des_all+0.3) - altitude) + 5 * (0 - get_state(environment)[9]) + 3 *(error_z - linear_velocity[3])+ rpm_new 
-    println("thrust: ", output_thrust)
+
+    # println("thrust: ", output_thrust)
 
 
 
@@ -194,8 +196,9 @@ function attitude_controller!(environment, k)
     push!(all_error_list, des_all)
     push!(z_ang_vel_list, linear_velocity[3])
 
-    u = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
-    set_input!(environment, u)  
+    rotor1, rotor2, rotor3, rotor4 = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
+    rotor_speed = [rotor1, rotor2, rotor3, rotor4]
+    set_input!(environment, rotor_speed)  
 end
 
 function plot_attitude_controller_data()
@@ -263,18 +266,12 @@ end
 
 
 function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
-    u = zeros(4)
-    
+    rotor3 = output_thrust + output_roll + output_pitch + output_yaw
+    rotor4 = output_thrust - output_roll + output_pitch - output_yaw
+    rotor2 = output_thrust + output_roll - output_pitch - output_yaw
+    rotor1 = output_thrust - output_roll - output_pitch + output_yaw
 
-    u[3] = output_thrust + output_roll + output_pitch + output_yaw
-    u[4] = output_thrust - output_roll + output_pitch - output_yaw
-    u[2] = output_thrust + output_roll - output_pitch - output_yaw
-    u[1] = output_thrust - output_roll - output_pitch + output_yaw
-
-    
-
-
-    return u
+    return rotor1, rotor2, rotor3, rotor4
 end
 
 # Define the initial position and orientation
