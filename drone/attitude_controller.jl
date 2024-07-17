@@ -6,6 +6,8 @@ using PyPlot
 
 #TO DO 
 #Special featurs a flip or something else
+#make drone terminate in final position
+#creation of nice video 
 quadrotor_env = get_environment(:quadrotor_waypoint; horizon=2000)
 current_waypoint_index = 0
 des_pos = [0;0;0]
