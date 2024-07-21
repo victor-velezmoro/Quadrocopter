@@ -8,7 +8,7 @@ using PyPlot
 #Special featurs a flip or something else
 #make drone terminate in final position
 #creation of nice video 
-quadrotor_env = get_environment(:quadrotor_waypoint; horizon=2000)
+quadrotor_env = get_environment(:quadrotor_waypoint; horizon=600)
 current_waypoint_index = 0
 des_pos = [0;0;0]
 
@@ -42,7 +42,7 @@ function check_waypoints!(environment, k)
     global current_waypoint_index
     global des_pos
      waypoints = 
-    [[1.0, 1.0, 0.5], [2.0, 0.0, 0.5], [1.0, -1.0, 0.5], [0.0, 0.0, 0.5]]
+    [[0, 0.0, 3], [2.0, 0.0, 0.5], [1.0, -1.0, 0.5], [0.0, 0.0, 0.5]]
     
  
     current_pos = get_state(environment)[1:3]
@@ -107,6 +107,10 @@ function position_controller!(environment, k)
 
     des_pitch= (K_P_1 * (des_vel[1] - linear_velocity[1]) + K_D_1 * (0 - linear_velocity[1]) + (K_I_1 * (des_pos[1] - position[1])))
     des_roll = -((K_P_1 * (des_vel[2] - linear_velocity[2]) + K_D_1 * (0 - linear_velocity[2]) + (K_I_1 * (des_pos[2] - position[2]))))
+    # des_pitch= (K_P_1 * (des_vel[1] - linear_velocity[1]) + K_D_1 * (0 - linear_velocity[1]))
+    # des_roll = -((K_P_1 * (des_vel[2] - linear_velocity[2]) + K_D_1 * (0 - linear_velocity[2])))
+    # des_pitch= ( + K_D_1 * (0 - linear_velocity[1]) + (K_I_1 * (des_pos[1] - position[1])))
+    # des_roll = -( + K_D_1 * (0 - linear_velocity[2]) + (K_I_1 * (des_pos[2] - position[2])))
 
     # print("des_roll: ", des_roll, " des_pitch: ", des_pitch)
 
@@ -129,6 +133,10 @@ global des_altitude_list = []
 global position_list = []
 global all_error_list = []
 global z_ang_vel_list = []
+global des_yaw_list = []
+global current_yaw_list = []
+global angular_velocity_yaw_list = []
+global output_yaw_list = []
 
 function attitude_controller!(environment, k)
     global des_pos
@@ -148,6 +156,11 @@ function attitude_controller!(environment, k)
     global position_list
     global all_error_list
     global z_ang_vel_list
+    global des_yaw_list
+    global current_yaw_list
+    global angular_velocity_yaw_list
+    global output_yaw_list
+
 
     position, orientation, linear_velocity, angular_velocity, current_roll, current_pitch, current_yaw, altitude, des_pos, current_waypoint_index = state_provider!(environment)
 
@@ -195,6 +208,10 @@ function attitude_controller!(environment, k)
     push!(position_list, altitude)
     push!(all_error_list, des_all)
     push!(z_ang_vel_list, linear_velocity[3])
+    push!(des_yaw_list, des_yaw)
+    push!(current_yaw_list, current_yaw)
+    push!(angular_velocity_yaw_list, angular_velocity[3])
+    push!(output_yaw_list, output_yaw)
 
     rotor1, rotor2, rotor3, rotor4 = MMA!(output_roll, output_pitch, output_yaw, output_thrust)
     rotor_speed = [rotor1, rotor2, rotor3, rotor4]
@@ -216,6 +233,10 @@ function plot_attitude_controller_data()
     global des_altitude_list
     global all_error_list
     global z_ang_vel_list
+    global des_yaw_list
+    global current_yaw_list
+    global angular_velocity_yaw_list
+    global output_yaw_list
 
     figure()
     subplot(2, 2, 1)
@@ -223,7 +244,7 @@ function plot_attitude_controller_data()
     plot(current_roll_list, label="Current Roll")
     plot(angular_velocity_roll_list, label="Angular Velocity Roll")
     plot(output_roll_list, label="Output Roll")
-    legend()
+    # legend()
     title("Roll Control")
 
     subplot(2, 2, 2)
@@ -235,11 +256,11 @@ function plot_attitude_controller_data()
     title("Pitch Control")
 
     subplot(2, 2, 3)
-    plot(des_roll_list, label="Desired Roll")
-    plot(current_roll_list, label="Current Roll")
-    plot(angular_velocity_roll_list, label="Angular Velocity Roll")
-    plot(output_roll_list, label="Output Roll")
-    title("Roll")
+    plot(des_yaw_list)
+    plot(current_yaw_list)
+    plot(angular_velocity_yaw_list)
+    plot(output_yaw_list)
+    title("Yaw Control")
 
     # subplot(2, 2, 4)
     # # plot(output_thrust_list, label="Output Thrust")
@@ -261,13 +282,21 @@ function plot_attitude_controller_data()
 
 
     tight_layout()
+<<<<<<< HEAD
     savefig("attitude_controller_test_windows.png")
+=======
+    savefig("altitude_test.png")
+>>>>>>> 1f1f1a273208604a698aff7668dc40cfaf3dd0b0
 end
 
 
 function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
+<<<<<<< HEAD
     rotor1 = output_thrust - output_roll - output_pitch + output_yaw
     rotor2 = output_thrust + output_roll - output_pitch - output_yaw
+=======
+
+>>>>>>> 1f1f1a273208604a698aff7668dc40cfaf3dd0b0
     rotor3 = output_thrust + output_roll + output_pitch + output_yaw
     rotor4 = output_thrust - output_roll + output_pitch - output_yaw
     return rotor1, rotor2, rotor3, rotor4
