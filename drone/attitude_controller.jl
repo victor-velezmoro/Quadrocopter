@@ -261,16 +261,15 @@ function plot_attitude_controller_data()
 
 
     tight_layout()
-    savefig("attitude_controller_plot_run.png")
+    savefig("attitude_controller_test_windows.png")
 end
 
 
 function MMA!(output_roll, output_pitch, output_yaw, output_thrust)
+    rotor1 = output_thrust - output_roll - output_pitch + output_yaw
+    rotor2 = output_thrust + output_roll - output_pitch - output_yaw
     rotor3 = output_thrust + output_roll + output_pitch + output_yaw
     rotor4 = output_thrust - output_roll + output_pitch - output_yaw
-    rotor2 = output_thrust + output_roll - output_pitch - output_yaw
-    rotor1 = output_thrust - output_roll - output_pitch + output_yaw
-
     return rotor1, rotor2, rotor3, rotor4
 end
 
